@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Таймер">
+<meta name="theme-color" content="#1a56db">
+<title>Рабочий таймер</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 16px;
+    padding-bottom: 32px;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a; display: flex; align-items: center; gap: 8px; }
+  .card { background: #fff; border-radius: 16px; padding: 18px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .section-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .clock { font-size: 36px; font-weight: 600; color: #1a1a1a; letter-spacing: 1px; margin-bottom: 4px; }
+  .shift-row { display: flex; gap: 8px; margin-top: 12px; }
+  .shift-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1.5px solid #e0e0e0; background: transparent; color: #555; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .shift-btn.active { background: #e8f0fe; color: #1a56db; border-color: #93b4f8; }
+  .shift-info { font-size: 13px; color: #888; margin-top: 6px; }
+  .break-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+  .break-row:last-child { border-bottom: none; }
+  .break-time { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+  .break-label { font-size: 13px; color: #888; margin-top: 2px; }
+  .badge { font-size: 13px; font-weight: 500; padding: 5px 12px; border-radius: 20px; }
+  .badge-wait { background: #e8f5e9; color: #2e7d32; }
+  .badge-soon { background: #fff8e1; color: #f57f17; }
+  .badge-now  { background: #fdecea; color: #c62828; }
+  .badge-done { background: #f5f5f5; color: #9e9e9e; }
+  .timer-display { font-size: 56px; font-weight: 700; text-align: center; color: #1a1a1a; letter-spacing: 3px; padding: 12px 0 16px; font-variant-numeric: tabular-nums; }
+  .timer-display.running { color: #c62828; }
+  .pause-btn { width: 100%; padding: 16px; border-radius: 14px; border: none; font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .pause-btn:active { transform: scale(0.97); }
+  .pause-btn.start { background: #fdecea; color: #c62828; }
+  .pause-btn.end { background: #e8f5e9; color: #2e7d32; }
+  .history-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+  .history-item:last-child { border-bottom: none; }
+  .history-dur { font-weight: 500; color: #1a1a1a; }
+  .total-row { display: flex; justify-content: space-between; padding-top: 10px; margin-top: 6px; border-top: 1.5px solid #e0e0e0; font-size: 14px; }
+  .total-row span:last-child { font-weight: 600; color: #1a56db; }
+  .notif-bar { display: none; align-items: center; gap: 10px; background: #fff8e1; color: #b45309; border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; font-size: 14px; font-weight: 500; border: 1px solid #fcd34d; }
+  .notif-bar.danger { background: #fdecea; color: #c62828; border-color: #f5c6cb; }
+  .install-bar { display: none; align-items: center; justify-content: space-between; background: #e8f0fe; color: #1a56db; border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; font-size: 14px; gap: 10px; }
+  .install-btn { background: #1a56db; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<h1><i class="ti ti-clock-hour-4"></i> Рабочий таймер</h1>
+
+<div id="install-bar" class="install-bar">
+  <span><i class="ti ti-download"></i> Установить как приложение</span>
+  <button class="install-btn" onclick="installApp()">Установить</button>
+</div>
+
+<div id="notif-bar" class="notif-bar">
+  <i class="ti ti-bell"></i>
+  <span id="notif-text"></span>
+</div>
+
+<div class="card">
+  <div>
+    <div class="section-label">текущее время</div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+  <div class="section-label" style="margin-top:16px;">выбери смену</div>
+  <div class="shift-row">
+    <button class="shift-btn active" id="btn-regular" onclick="setShift('regular')">
+      <i class="ti ti-sun"></i> Обычная
+    </button>
+    <button class="shift-btn" id="btn-duty" onclick="setShift('duty')">
+      <i class="ti ti-moon"></i> Дежурная
+    </button>
+  </div>
+  <div class="shift-info" id="shift-info">8:30 – 20:30</div>
+</div>
+
+<div class="card">
+  <div class="section-label">перерывы на обед</div>
+  <div id="breaks-list"></div>
+</div>
+
+<div class="card">
+  <div class="section-label">таймер паузы</div>
+  <div class="timer-display" id="timer-display">00:00</div>
+  <button class="pause-btn start" id="pause-btn" onclick="togglePause()">
+    <i class="ti ti-player-pause" id="pause-icon"></i>
+    <span id="pause-label">На паузу</span>
+  </button>
+  <div id="history-block" style="display:none; margin-top:16px;">
+    <div class="section-label">история пауз сегодня</div>
+    <div id="history-list"></div>
+    <div class="total-row">
+      <span>Всего на паузах:</span>
+      <span id="total-pause">0 мин 0 сек</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const SHIFTS = {
+  regular: { label: '8:30 – 20:30', breaks: [{ time: '13:00', label: 'Первый обед' }, { time: '18:30', label: 'Второй обед' }] },
+  duty:    { label: '11:00 – 23:00', breaks: [{ time: '15:00', label: 'Первый обед' }, { time: '19:00', label: 'Второй обед' }] }
+};
+
+let currentShift = localStorage.getItem('shift') || 'regular';
+let pauseActive = false, pauseStart = null, pauseTimer = null, pauseWarnTimer = null;
+let pauseHistory = [], notifShown = {}, notifTimeout = null, deferredPrompt = null;
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function getNow() { const d = new Date(); return { h: d.getHours(), m: d.getMinutes(), s: d.getSeconds() }; }
+function toMins(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
+
+function setShift(s) {
+  currentShift = s;
+  localStorage.setItem('shift', s);
+  document.getElementById('btn-regular').classList.toggle('active', s==='regular');
+  document.getElementById('btn-duty').classList.toggle('active', s==='duty');
+  document.getElementById('shift-info').textContent = SHIFTS[s].label;
+  renderBreaks();
+}
+
+function getStatus(bt) {
+  const {h,m} = getNow();
+  const diff = toMins(bt) - (h*60+m);
+  if (diff > 30)  return { text: 'ждёт', cls: 'badge-wait' };
+  if (diff > 0)   return { text: `через ${diff} мин`, cls: 'badge-soon' };
+  if (diff >= -30) return { text: 'сейчас!', cls: 'badge-now' };
+  return { text: 'прошёл', cls: 'badge-done' };
+}
+
+function renderBreaks() {
+  document.getElementById('breaks-list').innerHTML = SHIFTS[currentShift].breaks.map(b => {
+    const st = getStatus(b.time);
+    return `<div class="break-row"><div><div class="break-time">${b.time}</div><div class="break-label">${b.label}</div></div><span class="badge ${st.cls}">${st.text}</span></div>`;
+  }).join('');
+}
+
+function showNotif(text, danger) {
+  const bar = document.getElementById('notif-bar');
+  document.getElementById('notif-text').textContent = text;
+  bar.className = 'notif-bar' + (danger ? ' danger' : '');
+  bar.style.display = 'flex';
+  clearTimeout(notifTimeout);
+  notifTimeout = setTimeout(() => { bar.style.display = 'none'; }, 12000);
+}
+
+function tryPush(title, body) {
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'NOTIFY', title, body });
+    } else {
+      new Notification(title, { body, icon: 'icon.png' });
+    }
+  }
+}
+
+function checkNotifications() {
+  const {h,m} = getNow();
+  const now = h*60+m;
+  const today = new Date().toDateString();
+  SHIFTS[currentShift].breaks.forEach(b => {
+    const bm = toMins(b.time);
+    const diff = bm - now;
+    const k10 = b.time+today+'10', k0 = b.time+today+'0';
+    if (diff === 15 && !notifShown[k10]) {
+      notifShown[k10] = true;
+      showNotif(`${b.label} через 15 минут (в ${b.time})`);
+      tryPush(`${b.label} через 15 минут`, `Скоро перерыв — в ${b.time}`);
+    }
+    if (diff === 0 && !notifShown[k0]) {
+      notifShown[k0] = true;
+      showNotif(`Время! ${b.label} — ${b.time} 🍽`, true);
+      tryPush(`Обед! ${b.label}`, `Время ${b.time} — пора на перерыв!`);
+    }
+  });
+}
+
+function togglePause() {
+  if (!pauseActive) {
+    pauseActive = true;
+    pauseStart = new Date();
+    document.getElementById('pause-btn').className = 'pause-btn end';
+    document.getElementById('pause-icon').className = 'ti ti-player-play';
+    document.getElementById('pause-label').textContent = 'Вернулась';
+    document.getElementById('timer-display').classList.add('running');
+    pauseTimer = setInterval(updateTimer, 1000);
+    tryPush('Пауза начата', 'Таймер запущен');
+    let warnCount = 0;
+    pauseWarnTimer = setInterval(() => {
+      warnCount++;
+      if (!pauseActive) { clearInterval(pauseWarnTimer); return; }
+      const elapsed = Math.floor((new Date() - pauseStart) / 60000);
+      const msgs = [
+        '5 минут прошло — скоро возвращайся!',
+        '10 минут! Давай-давай, пора бежать!',
+        '15 минут на паузе! Ты там не потерялась?',
+        '20 минут! Шеф негодует!!!',
+      ];
+      const msg = msgs[warnCount - 1] || `${elapsed} минут на паузе! ВОЗВРАЩАЙСЯ!`;
+      showNotif(msg, true);
+      tryPush('Пауза затянулась!', msg);
+    }, 5 * 60 * 1000);
+  } else {
+    const ended = new Date();
+    const totalSec = Math.floor((ended - pauseStart) / 1000);
+    const mins = Math.floor(totalSec/60), secs = totalSec%60;
+    pauseHistory.push({ from: pad(pauseStart.getHours())+':'+pad(pauseStart.getMinutes()), to: pad(ended.getHours())+':'+pad(ended.getMinutes()), mins, secs });
+    pauseActive = false;
+    clearInterval(pauseTimer);
+    clearInterval(pauseWarnTimer);
+    document.getElementById('timer-display').textContent = '00:00';
+    document.getElementById('timer-display').classList.remove('running');
+    document.getElementById('pause-btn').className = 'pause-btn start';
+    document.getElementById('pause-icon').className = 'ti ti-player-pause';
+    document.getElementById('pause-label').textContent = 'На паузу';
+    renderHistory();
+    showNotif(`Пауза завершена — ${mins} мин ${pad(secs)} сек`);
+    tryPush('Вернулась с паузы', `Пауза: ${mins} мин ${secs} сек`);
+  }
+}
+
+function updateTimer() {
+  if (!pauseStart) return;
+  const totalSec = Math.floor((new Date()-pauseStart)/1000);
+  document.getElementById('timer-display').textContent = pad(Math.floor(totalSec/60))+':'+pad(totalSec%60);
+}
+
+function renderHistory() {
+  const block = document.getElementById('history-block');
+  if (!pauseHistory.length) { block.style.display='none'; return; }
+  block.style.display = 'block';
+  document.getElementById('history-list').innerHTML = pauseHistory.map((p,i) =>
+    `<div class="history-item"><span style="color:#555">${i+1}. ${p.from} – ${p.to}</span><span class="history-dur">${p.mins} мин ${pad(p.secs)} сек</span></div>`
+  ).join('');
+  const ts = pauseHistory.reduce((a,p)=>a+p.mins*60+p.secs,0);
+  document.getElementById('total-pause').textContent = `${Math.floor(ts/60)} мин ${pad(ts%60)} сек`;
+}
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      document.getElementById('install-bar').style.display = 'none';
+      deferredPrompt = null;
+    });
+  }
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-bar').style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-bar').style.display = 'none';
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+
+setShift(currentShift);
+
+setInterval(() => {
+  const {h,m,s} = getNow();
+  document.getElementById('clock').textContent = pad(h)+':'+pad(m)+':'+pad(s);
+  renderBreaks();
+  checkNotifications();
+}, 1000);
+</script>
+</body>
+</html>
